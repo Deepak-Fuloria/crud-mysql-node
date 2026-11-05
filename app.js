@@ -22,7 +22,7 @@ app.use(express.urlencoded({
 app.get('/', (req, res) => {
     res.json({
         status: "success",
-        message: "app working fine"
+        message: "app working fine ."
     });
 });
 
