@@ -1,22 +1,33 @@
-name: Simple VPS Deploy
+name: Deploy Node.js App via SSH Key
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-    - name: Run commands on VPS via SSH
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: ${{ secrets.VPS_USER }}
-        key: "${{ secrets.VPS_SSH_KEY }}" # Yahan quotes double-verify karte hain key ko string format mein
-        script_stop: true # Kisi bhi error par pipeline pehle hi ruk jaye
-        script: |
-          cd /home/dev/node-api
-          git pull origin main
-          npm install --production
-          pm2 restart app.js || pm2 start app.js --name "node-api"
+      - name: Deploy to VPS via Native SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+          # Yahan se aapka Node.js project handle hoga
+          ssh -i ~/.ssh/deploy_key "$VPS_USER@$VPS_HOST" 'bash -s' <<'EOF'
+            set -e
+            cd /home/dev/node-api
+            git fetch origin
+            git checkout -f -B main origin/main
+            npm install --production # Node API ke liye dependencies setup
+            pm2 restart app.js || pm2 start app.js --name "node-api" # PM2 safe restart
+            pm2 save
+          EOF
