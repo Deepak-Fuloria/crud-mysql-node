@@ -2,7 +2,7 @@ name: Simple VPS Deploy
 
 on:
   push:
-    branches: [ main ] # Jab bhi 'main' branch par push hoga tab chalega
+    branches: [ main ]
 
 jobs:
   deploy:
@@ -11,11 +11,11 @@ jobs:
     - name: Run commands on VPS via SSH
       uses: appleboy/ssh-action@v1.0.3
       with:
-        host: ${{ secrets.VPS_HOST }}       # Server IP
-        username: ${{ secrets.VPS_USER }}   # Server Username (ubuntu ya root)
-        key: ${{ secrets.VPS_SSH_KEY }}     # Private SSH Key
+        host: ${{ secrets.VPS_HOST }}       # GitHub Secrets se IP uthayega
+        username: ${{ secrets.VPS_USER }}   # GitHub Secrets se username (root) uthayega
+        key: ${{ secrets.VPS_SSH_KEY }}     # GitHub Secrets se Private Key uthayega
         script: |
-          cd /var/www/crud-mysql             # 1. Apne VPS ke project folder mein jao
-          git pull origin main               # 2. GitHub se naya code khincho
-          npm install                        # 3. Agar koi nayi dependency hai toh install karo
-          node index.js &                    # 4. App ko background mein chala do
+          cd /home/dev/node-api              # 1. Apne VPS ke actual project folder mein jao
+          git pull origin main               # 2. GitHub se naya code pull karo
+          npm install --production           # 3. Dependencies fast install karo
+          pm2 restart app.js || pm2 start app.js --name "node-api" # 4. PM2 restart (app.js ke liye)
