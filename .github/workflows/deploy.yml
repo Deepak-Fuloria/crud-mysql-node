@@ -10,24 +10,37 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to VPS via Native SSH
+      - name: Deploy to VPS
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+
+          printf '%s\n' "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+
+          ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null
+
           ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
 
-          # Yahan se aapka Node.js project handle hoga
-          ssh -i ~/.ssh/deploy_key "$VPS_USER@$VPS_HOST" 'bash -s' <<'EOF'
-            set -e
-            cd /home/dev/node-api
-            git fetch origin
-            git checkout -f -B main origin/main
-            npm install --production # Node API ke liye dependencies setup
-            pm2 restart app.js || pm2 start app.js --name "node-api" # PM2 safe restart
-            pm2 save
+          ssh -i ~/.ssh/deploy_key \
+            -o IdentitiesOnly=yes \
+            "$VPS_USER@$VPS_HOST" 'bash -s' <<'EOF'
+
+              set -e
+
+              cd /home/dev/node-api
+
+              git fetch origin
+              git checkout -f -B main origin/main
+
+              npm install --production
+
+              pm2 restart node-api || pm2 start app.js --name node-api
+
+              pm2 save
+
           EOF
